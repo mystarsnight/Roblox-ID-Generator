@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Asset ID Finder (Fast)</title>
+<title>Roblox Asset ID Finder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -19,7 +19,7 @@ body {
   background:#1a1a22;
   padding:20px;
   border-radius:14px;
-  max-width:520px;
+  max-width:560px;
   width:100%;
   box-shadow:0 20px 40px rgba(0,0,0,.4);
 }
@@ -49,14 +49,20 @@ select,input[type=range] {
 
 .results {
   margin-top:15px;
-  max-height:220px;
+  max-height:260px;
   overflow:auto;
   font-size:.85rem;
 }
 
-.results div {
-  padding:6px;
+.entry {
   border-bottom:1px solid #2a2a36;
+  padding:8px 0;
+}
+
+.entry img {
+  width:100%;
+  border-radius:8px;
+  margin-top:6px;
 }
 
 a { color:#4f8cff; }
@@ -65,7 +71,7 @@ a { color:#4f8cff; }
 
 <body>
 <div class="box">
-  <h2>⚡ Roblox Asset ID Finder</h2>
+  <h2>🎯 Roblox Asset ID Finder</h2>
 
   <label>Asset Category</label>
   <select id="category">
@@ -79,13 +85,15 @@ a { color:#4f8cff; }
 
   <label>Speed (attempts / second)</label>
   <input type="range" id="speed" min="1" max="75" value="25">
+
   <div class="stats">
     Speed: <span id="speedVal">25</span>/sec |
-    Tries: <span id="tries">0</span>
+    Attempts: <span id="tries">0</span> |
+    Found: <span id="found">0</span>
   </div>
 
   <button class="start" onclick="start()">Start</button>
-  <button class="stop" onclick="stop()" disabled id="stopBtn">Stop</button>
+  <button class="stop" onclick="stop()" id="stopBtn" disabled>Stop</button>
 
   <div class="results" id="results"></div>
 </div>
@@ -93,7 +101,8 @@ a { color:#4f8cff; }
 <script>
 let running = false;
 let tries = 0;
-let interval = null;
+let found = 0;
+let timer = null;
 
 const speedSlider = document.getElementById("speed");
 const speedVal = document.getElementById("speedVal");
@@ -110,14 +119,15 @@ function thumbUrl(id, category) {
 function start() {
   if (running) return;
   running = true;
+
   document.getElementById("stopBtn").disabled = false;
 
-  interval = setInterval(runBatch, 1000);
+  timer = setInterval(runBatch, 1000);
 }
 
 function stop() {
   running = false;
-  clearInterval(interval);
+  clearInterval(timer);
   document.getElementById("stopBtn").disabled = true;
 }
 
@@ -135,16 +145,20 @@ function runBatch() {
     const img = new Image();
 
     img.onload = () => {
-      const link = `https://create.roblox.com/store/asset/${id}`;
+      found++;
+      document.getElementById("found").textContent = found;
+
       const entry = document.createElement("div");
+      entry.className = "entry";
 
       entry.innerHTML = `
-        ✅ <strong>${id}</strong>
-        (${category})<br>
-        Attempt #${tries}<br>
-        <a href="${link}" target="_blank">Open</a>
+        ✅ <strong>ID:</strong> ${id}<br>
+        📦 <strong>Category:</strong> ${category}<br>
+        🔢 <strong>Found on attempt:</strong> ${tries}<br>
+        <a href="https://create.roblox.com/store/asset/${id}" target="_blank">Open on Create</a>
       `;
 
+      entry.appendChild(img);
       document.getElementById("results").prepend(entry);
     };
 

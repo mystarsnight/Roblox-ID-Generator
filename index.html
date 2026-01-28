@@ -2,165 +2,190 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Random Roblox Creator Search</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roblox Asset ID Finder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-:root {
-  --bg: #0f0f14;
-  --card: #1a1a22;
-  --text: #eaeaf0;
-  --accent: #4f8cff;
-}
-
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: #0f0f14;
+  color: #eaeaf0;
+  font-family: system-ui, sans-serif;
   display: flex;
   justify-content: center;
-  padding: 20px;
+  padding: 30px;
 }
 
-.app {
-  max-width: 700px;
-  width: 100%;
-  background: var(--card);
-  border-radius: 16px;
+.box {
+  background: #1a1a22;
   padding: 20px;
+  border-radius: 14px;
+  max-width: 480px;
+  width: 100%;
   box-shadow: 0 20px 40px rgba(0,0,0,.4);
 }
 
-h1 {
-  margin-top: 0;
-  font-size: 1.5rem;
-}
-
 button {
-  background: var(--accent);
+  width: 100%;
+  padding: 12px;
   border: none;
-  padding: 12px 16px;
   border-radius: 10px;
-  color: white;
   font-weight: 600;
   cursor: pointer;
+  margin-top: 10px;
 }
 
-button:hover {
-  opacity: .9;
+.start {
+  background: #4f8cff;
+  color: white;
 }
 
-.categories {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 15px;
+.stop {
+  background: #ff4f4f;
+  color: white;
+}
+
+button:disabled {
+  opacity: .6;
+}
+
+select, input[type="range"] {
+  width: 100%;
+  margin-top: 8px;
 }
 
 label {
-  background: #2a2a36;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: .9rem;
-}
-
-input[type="checkbox"] {
-  margin-right: 6px;
-}
-
-.output {
-  margin-top: 15px;
-  word-break: break-all;
-}
-
-.history {
-  margin-top: 20px;
   font-size: .85rem;
   opacity: .85;
 }
 
-a {
-  color: var(--accent);
+.stats {
+  margin-top: 10px;
+  font-size: .9rem;
+}
+
+.result {
+  margin-top: 15px;
+  word-break: break-word;
+}
+
+img {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
-<div class="app">
-  <h1>🎲 Random Roblox Creator Search</h1>
+<div class="box">
+  <h2>🎯 Roblox Asset ID Finder</h2>
 
-  <p>Select what you want to search:</p>
+  <label>Asset Category</label>
+  <select id="category">
+    <option value="assets">Any</option>
+    <option value="audio">Audio</option>
+    <option value="decals">Decal</option>
+    <option value="models">Model</option>
+    <option value="animations">Animation</option>
+    <option value="meshes">Mesh</option>
+  </select>
 
-  <div class="categories" id="categories"></div>
+  <label>Search Delay (ms)</label>
+  <input type="range" id="speed" min="0" max="300" value="30">
+  <div class="stats">
+    Delay: <span id="speedVal">30</span> ms |
+    Speed: <span id="aps">0</span> attempts/sec
+  </div>
 
-  <button onclick="generateSearch()">Generate Random Search</button>
+  <button class="start" id="startBtn" onclick="start()">Start</button>
+  <button class="stop" id="stopBtn" onclick="stop()" disabled>Stop</button>
 
-  <div class="output" id="output"></div>
-
-  <div class="history" id="history"></div>
+  <div class="stats" id="tries">Tries: 0</div>
+  <div class="result" id="result"></div>
 </div>
 
 <script>
-const categories = [
-  "Audio",
-  "Decals",
-  "Models",
-  "Plugins",
-  "Animations",
-  "Meshes",
-  "Fonts",
-  "Materials"
-];
+let tries = 0;
+let running = false;
+let startTime = 0;
 
-// Random human-like keywords
-const keywords = [
-  "laser", "sci fi", "medieval", "ui", "icon", "ambient",
-  "explosion", "magic", "door", "weapon", "sky", "neon",
-  "horror", "nature", "sound", "menu", "effect"
-];
+const speedSlider = document.getElementById("speed");
+const speedVal = document.getElementById("speedVal");
+const apsEl = document.getElementById("aps");
 
-const history = [];
+speedSlider.oninput = () => speedVal.textContent = speedSlider.value;
 
-const container = document.getElementById("categories");
+function randomId() {
+  return Math.floor(Math.random() * 1_000_000_000) + 1000;
+}
 
-categories.forEach(cat => {
-  container.innerHTML += `
-    <label>
-      <input type="checkbox" value="${cat}" checked>
-      ${cat}
-    </label>
-  `;
-});
+function thumbUrl(id, category) {
+  return `https://rbxthumbs.roblox.com/v1/${category}?assetIds=${id}&size=420x420&format=Png`;
+}
 
-function generateSearch() {
-  const checked = [...document.querySelectorAll("input:checked")]
-    .map(i => i.value);
+function start() {
+  if (running) return;
+  running = true;
+  tries = 0;
+  startTime = performance.now();
 
-  if (!checked.length) {
-    alert("Pick at least one category");
-    return;
+  document.getElementById("tries").textContent = "Tries: 0";
+  document.getElementById("result").innerHTML = "";
+
+  document.getElementById("startBtn").disabled = true;
+  document.getElementById("stopBtn").disabled = false;
+
+  loop();
+}
+
+function stop() {
+  running = false;
+  document.getElementById("startBtn").disabled = false;
+  document.getElementById("stopBtn").disabled = true;
+}
+
+function updateSpeed() {
+  const elapsed = (performance.now() - startTime) / 1000;
+  if (elapsed > 0) {
+    apsEl.textContent = (tries / elapsed).toFixed(1);
   }
+}
 
-  const category = checked[Math.floor(Math.random() * checked.length)];
-  const keyword = keywords[Math.floor(Math.random() * keywords.length)];
+function loop() {
+  if (!running) return;
 
-  const url =
-    `https://create.roblox.com/store/search?category=${encodeURIComponent(category)}&query=${encodeURIComponent(keyword)}`;
+  tries++;
+  document.getElementById("tries").textContent = "Tries: " + tries;
+  updateSpeed();
 
-  history.unshift(url);
-  history.splice(5);
+  const id = randomId();
+  const category = document.getElementById("category").value;
+  const img = new Image();
 
-  document.getElementById("output").innerHTML = `
-    <p><strong>Category:</strong> ${category}</p>
-    <p><strong>Keyword:</strong> ${keyword}</p>
-    <p><a href="${url}" target="_blank">Open Search</a></p>
-  `;
+  img.onload = () => {
+    running = false;
+    document.getElementById("startBtn").disabled = false;
+    document.getElementById("stopBtn").disabled = true;
 
-  document.getElementById("history").innerHTML =
-    "<strong>Recent:</strong><br>" +
-    history.map(h => `• <a href="${h}" target="_blank">${h}</a>`).join("<br>");
+    const link = `https://create.roblox.com/store/asset/${id}`;
+
+    document.getElementById("result").innerHTML = `
+      <strong>✅ Valid Asset Found</strong><br>
+      ID: ${id}<br>
+      Category: ${category}<br>
+      Attempts: ${tries}<br>
+      Speed: ${apsEl.textContent} attempts/sec<br>
+      <a href="${link}" target="_blank">Open on create.roblox.com</a>
+    `;
+
+    document.getElementById("result").appendChild(img);
+  };
+
+  img.onerror = () => {
+    setTimeout(loop, Number(speedSlider.value));
+  };
+
+  img.src = thumbUrl(id, category);
 }
 </script>
 </body>

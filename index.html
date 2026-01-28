@@ -2,152 +2,151 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Asset ID Finder (WORKING)</title>
+<title>Roblox Asset & Game Finder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
-body {
-  background:#0f0f14;
-  color:#eaeaf0;
-  font-family:system-ui,sans-serif;
-  display:flex;
-  justify-content:center;
-  padding:30px;
-}
-
-.box {
-  background:#1a1a22;
-  padding:20px;
-  border-radius:14px;
-  max-width:600px;
-  width:100%;
-  box-shadow:0 20px 40px rgba(0,0,0,.4);
-}
-
-button {
-  width:100%;
-  padding:12px;
-  border:none;
-  border-radius:10px;
-  font-weight:600;
-  cursor:pointer;
-  margin-top:10px;
-}
-
-.start { background:#4f8cff; color:white; }
-.stop { background:#ff4f4f; color:white; }
-
-input[type=range] {
-  width:100%;
-  margin-top:8px;
-}
-
-.stats {
-  font-size:.9rem;
-  margin-top:8px;
-}
-
-.results {
-  margin-top:15px;
-  max-height:300px;
-  overflow:auto;
-  font-size:.85rem;
-}
-
-.entry {
-  border-bottom:1px solid #2a2a36;
-  padding:8px 0;
-}
-
-a { color:#4f8cff; }
+body{background:#0b0d12;color:#eee;font-family:sans-serif;padding:20px;display:flex;justify-content:center}
+.app{width:100%;max-width:900px;display:grid;grid-template-columns:1fr 1.2fr;gap:20px}
+.card{background:#161923;border-radius:16px;padding:18px;box-shadow:0 20px 40px rgba(0,0,0,.45)}
+label{font-size:.85rem;color:#9aa0b4}
+select,input[type=range]{width:100%;margin-top:6px}
+button{width:100%;padding:12px;border:none;border-radius:10px;font-weight:600;cursor:pointer;margin-top:10px}
+.start{background:#4f8cff;color:white}
+.stop{background:#ff4f4f;color:white}
+.stats{font-size:.85rem;color:#9aa0b4;margin-top:10px}
+.results{margin-top:12px;max-height:300px;overflow:auto;font-size:.85rem}
+.asset{border-bottom:1px solid #2a2f45;padding:8px 0}
+.ids{background:#1d2130;border-radius:12px;padding:12px;height:360px;overflow:auto;font-size:.85rem}
+.id{padding:6px 0;border-bottom:1px solid #2a2f45}
+a{color:#4f8cff}
 </style>
 </head>
-
 <body>
-<div class="box">
-  <h2>🎯 Roblox Asset ID Finder (REAL)</h2>
+<div class="app">
 
-  <label>Speed (attempts / second)</label>
-  <input type="range" id="speed" min="1" max="75" value="20">
+<div class="card">
+<h2>🎯 Finder</h2>
 
-  <div class="stats">
-    Speed: <span id="speedVal">20</span>/sec |
-    Attempts: <span id="tries">0</span> |
-    Found: <span id="found">0</span>
-  </div>
+<label>Search Type</label>
+<select id="searchType">
+  <option value="asset">Assets</option>
+  <option value="game">Games / Places</option>
+</select>
 
-  <button class="start" onclick="start()">Start</button>
-  <button class="stop" onclick="stop()" id="stopBtn" disabled>Stop</button>
+<label id="assetLabel">Asset Category</label>
+<select id="assetCategory">
+  <option value="any">Any</option>
+  <option value="3">Audio</option>
+  <option value="13">Decal</option>
+  <option value="10">Model</option>
+  <option value="24">Animation</option>
+  <option value="49">Mesh</option>
+</select>
 
-  <div class="results" id="results"></div>
+<label>Speed (attempts/sec)</label>
+<input type="range" id="speed" min="1" max="75" value="20">
+<div class="stats">
+Speed: <span id="speedVal">20</span>/sec<br>
+Attempts: <span id="tries">0</span><br>
+Found: <span id="found">0</span>
+</div>
+
+<button class="start" onclick="start()">Start</button>
+<button class="stop" onclick="stop()" id="stopBtn" disabled>Stop</button>
+
+<div class="results" id="results"></div>
+</div>
+
+<div class="card">
+<h2>🆔 Valid IDs</h2>
+<div class="ids" id="ids"></div>
+</div>
+
 </div>
 
 <script>
-let running = false;
-let tries = 0;
-let found = 0;
-let timer = null;
+let running=false,tries=0,found=0,timer=null;
+const speedSlider=document.getElementById("speed");
+const speedVal=document.getElementById("speedVal");
+const searchType=document.getElementById("searchType");
+const assetCategory=document.getElementById("assetCategory");
 
-const speedSlider = document.getElementById("speed");
-const speedVal = document.getElementById("speedVal");
-speedSlider.oninput = () => speedVal.textContent = speedSlider.value;
+speedSlider.oninput=()=>speedVal.textContent=speedSlider.value;
 
-function randomId() {
-  return Math.floor(Math.random() * 1_000_000_000) + 1000;
+// hide/show asset category when switching to games
+searchType.onchange=()=>{
+  document.getElementById("assetLabel").style.display=searchType.value==="asset"?"block":"none";
+  assetCategory.style.display=searchType.value==="asset"?"block":"none";
 }
 
-async function checkId(id) {
-  const url = `https://cors.isomorphic-git.org/https://economy.roblox.com/v2/assets/${id}/details`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
+function randomId(){return Math.floor(Math.random()*1_000_000_000)+1000}
+
+async function checkAsset(id){ // Assets API
+  const url=`https://cors.isomorphic-git.org/https://economy.roblox.com/v2/assets/${id}/details`;
+  const res=await fetch(url);
+  if(!res.ok) return null;
   return res.json();
 }
 
-function start() {
-  if (running) return;
-  running = true;
-  document.getElementById("stopBtn").disabled = false;
-
-  timer = setInterval(runBatch, 1000);
+async function checkGame(id){ // Games API
+  const url=`https://cors.isomorphic-git.org/https://games.roblox.com/v1/games?universeIds=${id}`;
+  const res=await fetch(url);
+  if(!res.ok) return null;
+  const j=await res.json();
+  return j.data?.length? j.data[0] : null;
 }
 
-function stop() {
-  running = false;
+function start(){
+  if(running)return;
+  running=true;
+  document.getElementById("stopBtn").disabled=false;
+  timer=setInterval(runBatch,1000);
+}
+
+function stop(){
+  running=false;
   clearInterval(timer);
-  document.getElementById("stopBtn").disabled = true;
+  document.getElementById("stopBtn").disabled=true;
 }
 
-async function runBatch() {
-  if (!running) return;
-
-  const batch = Number(speedSlider.value);
-
-  for (let i = 0; i < batch; i++) {
+async function runBatch(){
+  if(!running)return;
+  const batch=Number(speedSlider.value);
+  for(let i=0;i<batch;i++){
     tries++;
-    document.getElementById("tries").textContent = tries;
+    document.getElementById("tries").textContent=tries;
 
-    const id = randomId();
-
-    try {
-      const data = await checkId(id);
-      if (!data) continue;
-
-      found++;
-      document.getElementById("found").textContent = found;
-
-      const div = document.createElement("div");
-      div.className = "entry";
-      div.innerHTML = `
-        ✅ <strong>${data.Name}</strong><br>
-        ID: ${id}<br>
-        Type: ${data.AssetType?.Name}<br>
-        Creator: ${data.Creator?.Name}<br>
-        Price: ${data.PriceInRobux ?? "Free"}<br>
-        <a href="https://create.roblox.com/store/asset/${id}" target="_blank">Open on Create</a>
-      `;
-      document.getElementById("results").prepend(div);
-    } catch {}
+    const id=randomId();
+    if(searchType.value==="asset"){
+      try{
+        const data=await checkAsset(id);
+        if(!data)continue;
+        if(assetCategory.value!=="any"&&String(data.AssetTypeId)!==assetCategory.value)continue;
+        addResult(id,data.Name,data.AssetTypeId,data.Creator?.Name,`https://create.roblox.com/store/asset/${id}`);
+      }catch{}
+    }else if(searchType.value==="game"){
+      try{
+        const data=await checkGame(id);
+        if(!data)continue;
+        addResult(data.id,data.name,"Game",data.creator?.name,`https://www.roblox.com/games/${data.id}`);
+      }catch{}
+    }
   }
+}
+
+function addResult(id,name,type,creator,url){
+  found++;
+  document.getElementById("found").textContent=found;
+
+  const asset=document.createElement("div");
+  asset.className="asset";
+  asset.innerHTML=`<strong>${name}</strong><br>Type: ${type}<br>Creator: ${creator||"Unknown"}<br><a href="${url}" target="_blank">Open</a>`;
+  document.getElementById("results").prepend(asset);
+
+  const idEntry=document.createElement("div");
+  idEntry.className="id";
+  idEntry.innerHTML=`${id} — <a href="${url}" target="_blank">open</a>`;
+  document.getElementById("ids").prepend(idEntry);
 }
 </script>
 </body>

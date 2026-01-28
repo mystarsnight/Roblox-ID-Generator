@@ -2,83 +2,70 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Asset ID Finder</title>
+<title>Roblox Asset ID Finder (Fast)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 body {
-  background: #0f0f14;
-  color: #eaeaf0;
-  font-family: system-ui, sans-serif;
-  display: flex;
-  justify-content: center;
-  padding: 30px;
+  background:#0f0f14;
+  color:#eaeaf0;
+  font-family:system-ui,sans-serif;
+  display:flex;
+  justify-content:center;
+  padding:30px;
 }
 
 .box {
-  background: #1a1a22;
-  padding: 20px;
-  border-radius: 14px;
-  max-width: 480px;
-  width: 100%;
-  box-shadow: 0 20px 40px rgba(0,0,0,.4);
+  background:#1a1a22;
+  padding:20px;
+  border-radius:14px;
+  max-width:520px;
+  width:100%;
+  box-shadow:0 20px 40px rgba(0,0,0,.4);
 }
 
 button {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 10px;
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+  margin-top:10px;
 }
 
-.start {
-  background: #4f8cff;
-  color: white;
-}
+.start { background:#4f8cff; color:white; }
+.stop { background:#ff4f4f; color:white; }
 
-.stop {
-  background: #ff4f4f;
-  color: white;
-}
-
-button:disabled {
-  opacity: .6;
-}
-
-select, input[type="range"] {
-  width: 100%;
-  margin-top: 8px;
-}
-
-label {
-  font-size: .85rem;
-  opacity: .85;
+select,input[type=range] {
+  width:100%;
+  margin-top:8px;
 }
 
 .stats {
-  margin-top: 10px;
-  font-size: .9rem;
+  font-size:.9rem;
+  margin-top:8px;
 }
 
-.result {
-  margin-top: 15px;
-  word-break: break-word;
+.results {
+  margin-top:15px;
+  max-height:220px;
+  overflow:auto;
+  font-size:.85rem;
 }
 
-img {
-  width: 100%;
-  border-radius: 10px;
-  margin-top: 10px;
+.results div {
+  padding:6px;
+  border-bottom:1px solid #2a2a36;
 }
+
+a { color:#4f8cff; }
 </style>
 </head>
 
 <body>
 <div class="box">
-  <h2>🎯 Roblox Asset ID Finder</h2>
+  <h2>⚡ Roblox Asset ID Finder</h2>
 
   <label>Asset Category</label>
   <select id="category">
@@ -90,29 +77,26 @@ img {
     <option value="meshes">Mesh</option>
   </select>
 
-  <label>Search Delay (ms)</label>
-  <input type="range" id="speed" min="0" max="300" value="30">
+  <label>Speed (attempts / second)</label>
+  <input type="range" id="speed" min="1" max="75" value="25">
   <div class="stats">
-    Delay: <span id="speedVal">30</span> ms |
-    Speed: <span id="aps">0</span> attempts/sec
+    Speed: <span id="speedVal">25</span>/sec |
+    Tries: <span id="tries">0</span>
   </div>
 
-  <button class="start" id="startBtn" onclick="start()">Start</button>
-  <button class="stop" id="stopBtn" onclick="stop()" disabled>Stop</button>
+  <button class="start" onclick="start()">Start</button>
+  <button class="stop" onclick="stop()" disabled id="stopBtn">Stop</button>
 
-  <div class="stats" id="tries">Tries: 0</div>
-  <div class="result" id="result"></div>
+  <div class="results" id="results"></div>
 </div>
 
 <script>
-let tries = 0;
 let running = false;
-let startTime = 0;
+let tries = 0;
+let interval = null;
 
 const speedSlider = document.getElementById("speed");
 const speedVal = document.getElementById("speedVal");
-const apsEl = document.getElementById("aps");
-
 speedSlider.oninput = () => speedVal.textContent = speedSlider.value;
 
 function randomId() {
@@ -126,66 +110,46 @@ function thumbUrl(id, category) {
 function start() {
   if (running) return;
   running = true;
-  tries = 0;
-  startTime = performance.now();
-
-  document.getElementById("tries").textContent = "Tries: 0";
-  document.getElementById("result").innerHTML = "";
-
-  document.getElementById("startBtn").disabled = true;
   document.getElementById("stopBtn").disabled = false;
 
-  loop();
+  interval = setInterval(runBatch, 1000);
 }
 
 function stop() {
   running = false;
-  document.getElementById("startBtn").disabled = false;
+  clearInterval(interval);
   document.getElementById("stopBtn").disabled = true;
 }
 
-function updateSpeed() {
-  const elapsed = (performance.now() - startTime) / 1000;
-  if (elapsed > 0) {
-    apsEl.textContent = (tries / elapsed).toFixed(1);
-  }
-}
-
-function loop() {
+function runBatch() {
   if (!running) return;
 
-  tries++;
-  document.getElementById("tries").textContent = "Tries: " + tries;
-  updateSpeed();
-
-  const id = randomId();
+  const batchSize = Number(speedSlider.value);
   const category = document.getElementById("category").value;
-  const img = new Image();
 
-  img.onload = () => {
-    running = false;
-    document.getElementById("startBtn").disabled = false;
-    document.getElementById("stopBtn").disabled = true;
+  for (let i = 0; i < batchSize; i++) {
+    tries++;
+    document.getElementById("tries").textContent = tries;
 
-    const link = `https://create.roblox.com/store/asset/${id}`;
+    const id = randomId();
+    const img = new Image();
 
-    document.getElementById("result").innerHTML = `
-      <strong>✅ Valid Asset Found</strong><br>
-      ID: ${id}<br>
-      Category: ${category}<br>
-      Attempts: ${tries}<br>
-      Speed: ${apsEl.textContent} attempts/sec<br>
-      <a href="${link}" target="_blank">Open on create.roblox.com</a>
-    `;
+    img.onload = () => {
+      const link = `https://create.roblox.com/store/asset/${id}`;
+      const entry = document.createElement("div");
 
-    document.getElementById("result").appendChild(img);
-  };
+      entry.innerHTML = `
+        ✅ <strong>${id}</strong>
+        (${category})<br>
+        Attempt #${tries}<br>
+        <a href="${link}" target="_blank">Open</a>
+      `;
 
-  img.onerror = () => {
-    setTimeout(loop, Number(speedSlider.value));
-  };
+      document.getElementById("results").prepend(entry);
+    };
 
-  img.src = thumbUrl(id, category);
+    img.src = thumbUrl(id, category);
+  }
 }
 </script>
 </body>

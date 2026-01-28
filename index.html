@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Asset ID Finder</title>
+<title>Roblox Asset ID Finder (WORKING)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -19,7 +19,7 @@ body {
   background:#1a1a22;
   padding:20px;
   border-radius:14px;
-  max-width:560px;
+  max-width:600px;
   width:100%;
   box-shadow:0 20px 40px rgba(0,0,0,.4);
 }
@@ -37,7 +37,7 @@ button {
 .start { background:#4f8cff; color:white; }
 .stop { background:#ff4f4f; color:white; }
 
-select,input[type=range] {
+input[type=range] {
   width:100%;
   margin-top:8px;
 }
@@ -49,7 +49,7 @@ select,input[type=range] {
 
 .results {
   margin-top:15px;
-  max-height:260px;
+  max-height:300px;
   overflow:auto;
   font-size:.85rem;
 }
@@ -59,35 +59,19 @@ select,input[type=range] {
   padding:8px 0;
 }
 
-.entry img {
-  width:100%;
-  border-radius:8px;
-  margin-top:6px;
-}
-
 a { color:#4f8cff; }
 </style>
 </head>
 
 <body>
 <div class="box">
-  <h2>🎯 Roblox Asset ID Finder</h2>
-
-  <label>Asset Category</label>
-  <select id="category">
-    <option value="assets">Any</option>
-    <option value="audio">Audio</option>
-    <option value="decals">Decal</option>
-    <option value="models">Model</option>
-    <option value="animations">Animation</option>
-    <option value="meshes">Mesh</option>
-  </select>
+  <h2>🎯 Roblox Asset ID Finder (REAL)</h2>
 
   <label>Speed (attempts / second)</label>
-  <input type="range" id="speed" min="1" max="75" value="25">
+  <input type="range" id="speed" min="1" max="75" value="20">
 
   <div class="stats">
-    Speed: <span id="speedVal">25</span>/sec |
+    Speed: <span id="speedVal">20</span>/sec |
     Attempts: <span id="tries">0</span> |
     Found: <span id="found">0</span>
   </div>
@@ -112,14 +96,16 @@ function randomId() {
   return Math.floor(Math.random() * 1_000_000_000) + 1000;
 }
 
-function thumbUrl(id, category) {
-  return `https://rbxthumbs.roblox.com/v1/${category}?assetIds=${id}&size=420x420&format=Png`;
+async function checkId(id) {
+  const url = `https://cors.isomorphic-git.org/https://economy.roblox.com/v2/assets/${id}/details`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return res.json();
 }
 
 function start() {
   if (running) return;
   running = true;
-
   document.getElementById("stopBtn").disabled = false;
 
   timer = setInterval(runBatch, 1000);
@@ -131,38 +117,36 @@ function stop() {
   document.getElementById("stopBtn").disabled = true;
 }
 
-function runBatch() {
+async function runBatch() {
   if (!running) return;
 
-  const batchSize = Number(speedSlider.value);
-  const category = document.getElementById("category").value;
+  const batch = Number(speedSlider.value);
 
-  for (let i = 0; i < batchSize; i++) {
+  for (let i = 0; i < batch; i++) {
     tries++;
     document.getElementById("tries").textContent = tries;
 
     const id = randomId();
-    const img = new Image();
 
-    img.onload = () => {
+    try {
+      const data = await checkId(id);
+      if (!data) continue;
+
       found++;
       document.getElementById("found").textContent = found;
 
-      const entry = document.createElement("div");
-      entry.className = "entry";
-
-      entry.innerHTML = `
-        ✅ <strong>ID:</strong> ${id}<br>
-        📦 <strong>Category:</strong> ${category}<br>
-        🔢 <strong>Found on attempt:</strong> ${tries}<br>
+      const div = document.createElement("div");
+      div.className = "entry";
+      div.innerHTML = `
+        ✅ <strong>${data.Name}</strong><br>
+        ID: ${id}<br>
+        Type: ${data.AssetType?.Name}<br>
+        Creator: ${data.Creator?.Name}<br>
+        Price: ${data.PriceInRobux ?? "Free"}<br>
         <a href="https://create.roblox.com/store/asset/${id}" target="_blank">Open on Create</a>
       `;
-
-      entry.appendChild(img);
-      document.getElementById("results").prepend(entry);
-    };
-
-    img.src = thumbUrl(id, category);
+      document.getElementById("results").prepend(div);
+    } catch {}
   }
 }
 </script>

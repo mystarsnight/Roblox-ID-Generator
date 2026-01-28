@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Random Roblox Creator Search</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg: #0f0f14;
+  --card: #1a1a22;
+  --text: #eaeaf0;
+  --accent: #4f8cff;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.app {
+  max-width: 700px;
+  width: 100%;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.4);
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+button {
+  background: var(--accent);
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: .9;
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+label {
+  background: #2a2a36;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .9rem;
+}
+
+input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+.output {
+  margin-top: 15px;
+  word-break: break-all;
+}
+
+.history {
+  margin-top: 20px;
+  font-size: .85rem;
+  opacity: .85;
+}
+
+a {
+  color: var(--accent);
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <h1>🎲 Random Roblox Creator Search</h1>
+
+  <p>Select what you want to search:</p>
+
+  <div class="categories" id="categories"></div>
+
+  <button onclick="generateSearch()">Generate Random Search</button>
+
+  <div class="output" id="output"></div>
+
+  <div class="history" id="history"></div>
+</div>
+
+<script>
+const categories = [
+  "Audio",
+  "Decals",
+  "Models",
+  "Plugins",
+  "Animations",
+  "Meshes",
+  "Fonts",
+  "Materials"
+];
+
+// Random human-like keywords
+const keywords = [
+  "laser", "sci fi", "medieval", "ui", "icon", "ambient",
+  "explosion", "magic", "door", "weapon", "sky", "neon",
+  "horror", "nature", "sound", "menu", "effect"
+];
+
+const history = [];
+
+const container = document.getElementById("categories");
+
+categories.forEach(cat => {
+  container.innerHTML += `
+    <label>
+      <input type="checkbox" value="${cat}" checked>
+      ${cat}
+    </label>
+  `;
+});
+
+function generateSearch() {
+  const checked = [...document.querySelectorAll("input:checked")]
+    .map(i => i.value);
+
+  if (!checked.length) {
+    alert("Pick at least one category");
+    return;
+  }
+
+  const category = checked[Math.floor(Math.random() * checked.length)];
+  const keyword = keywords[Math.floor(Math.random() * keywords.length)];
+
+  const url =
+    `https://create.roblox.com/store/search?category=${encodeURIComponent(category)}&query=${encodeURIComponent(keyword)}`;
+
+  history.unshift(url);
+  history.splice(5);
+
+  document.getElementById("output").innerHTML = `
+    <p><strong>Category:</strong> ${category}</p>
+    <p><strong>Keyword:</strong> ${keyword}</p>
+    <p><a href="${url}" target="_blank">Open Search</a></p>
+  `;
+
+  document.getElementById("history").innerHTML =
+    "<strong>Recent:</strong><br>" +
+    history.map(h => `• <a href="${h}" target="_blank">${h}</a>`).join("<br>");
+}
+</script>
+</body>
+</html>

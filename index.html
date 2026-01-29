@@ -24,6 +24,7 @@ a{color:#4f8cff}
 <body>
 <div class="app">
 
+<!-- LEFT: Controls -->
 <div class="card">
 <h2>🎯 Finder</h2>
 
@@ -33,18 +34,21 @@ a{color:#4f8cff}
   <option value="game">Games / Places</option>
 </select>
 
-<label id="assetLabel">Asset Category</label>
-<select id="assetCategory">
-  <option value="any">Any</option>
-  <option value="3">Audio</option>
-  <option value="13">Decal</option>
-  <option value="10">Model</option>
-  <option value="24">Animation</option>
-  <option value="49">Mesh</option>
-</select>
+<div id="assetOptions">
+  <label>Asset Category</label>
+  <select id="assetCategory">
+    <option value="any">Any</option>
+    <option value="3">Audio</option>
+    <option value="13">Decal</option>
+    <option value="10">Model</option>
+    <option value="24">Animation</option>
+    <option value="49">Mesh</option>
+  </select>
+</div>
 
 <label>Speed (attempts/sec)</label>
 <input type="range" id="speed" min="1" max="75" value="20">
+
 <div class="stats">
 Speed: <span id="speedVal">20</span>/sec<br>
 Attempts: <span id="tries">0</span><br>
@@ -57,6 +61,7 @@ Found: <span id="found">0</span>
 <div class="results" id="results"></div>
 </div>
 
+<!-- RIGHT: ID List -->
 <div class="card">
 <h2>🆔 Valid IDs</h2>
 <div class="ids" id="ids"></div>
@@ -66,34 +71,37 @@ Found: <span id="found">0</span>
 
 <script>
 let running=false,tries=0,found=0,timer=null;
+
 const speedSlider=document.getElementById("speed");
 const speedVal=document.getElementById("speedVal");
 const searchType=document.getElementById("searchType");
 const assetCategory=document.getElementById("assetCategory");
+const assetOptions=document.getElementById("assetOptions");
 
 speedSlider.oninput=()=>speedVal.textContent=speedSlider.value;
 
-// hide/show asset category when switching to games
-searchType.onchange=()=>{
-  document.getElementById("assetLabel").style.display=searchType.value==="asset"?"block":"none";
-  assetCategory.style.display=searchType.value==="asset"?"block":"none";
-}
+// show/hide asset category if searching games
+searchType.onchange=()=>{assetOptions.style.display=searchType.value==="asset"?"block":"none"}
 
 function randomId(){return Math.floor(Math.random()*1_000_000_000)+1000}
 
-async function checkAsset(id){ // Assets API
-  const url=`https://cors.isomorphic-git.org/https://economy.roblox.com/v2/assets/${id}/details`;
-  const res=await fetch(url);
-  if(!res.ok) return null;
-  return res.json();
+async function checkAsset(id){
+  try{
+    const url=`https://cors.isomorphic-git.org/https://economy.roblox.com/v2/assets/${id}/details`;
+    const res=await fetch(url);
+    if(!res.ok)return null;
+    return res.json();
+  }catch{return null;}
 }
 
-async function checkGame(id){ // Games API
-  const url=`https://cors.isomorphic-git.org/https://games.roblox.com/v1/games?universeIds=${id}`;
-  const res=await fetch(url);
-  if(!res.ok) return null;
-  const j=await res.json();
-  return j.data?.length? j.data[0] : null;
+async function checkGame(id){
+  try{
+    const url=`https://cors.isomorphic-git.org/https://games.roblox.com/v1/games?universeIds=${id}`;
+    const res=await fetch(url);
+    if(!res.ok)return null;
+    const j=await res.json();
+    return j.data?.length?j.data[0]:null;
+  }catch{return null;}
 }
 
 function start(){
@@ -115,21 +123,17 @@ async function runBatch(){
   for(let i=0;i<batch;i++){
     tries++;
     document.getElementById("tries").textContent=tries;
-
     const id=randomId();
+
     if(searchType.value==="asset"){
-      try{
-        const data=await checkAsset(id);
-        if(!data)continue;
-        if(assetCategory.value!=="any"&&String(data.AssetTypeId)!==assetCategory.value)continue;
-        addResult(id,data.Name,data.AssetTypeId,data.Creator?.Name,`https://create.roblox.com/store/asset/${id}`);
-      }catch{}
+      const data=await checkAsset(id);
+      if(!data)continue;
+      if(assetCategory.value!=="any"&&String(data.AssetTypeId)!==assetCategory.value)continue;
+      addResult(id,data.Name,data.AssetTypeId,data.Creator?.Name,`https://create.roblox.com/store/asset/${id}`);
     }else if(searchType.value==="game"){
-      try{
-        const data=await checkGame(id);
-        if(!data)continue;
-        addResult(data.id,data.name,"Game",data.creator?.name,`https://www.roblox.com/games/${data.id}`);
-      }catch{}
+      const data=await checkGame(id);
+      if(!data)continue;
+      addResult(data.id,data.name,"Game",data.creator?.name,`https://www.roblox.com/games/${data.id}`);
     }
   }
 }

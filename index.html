@@ -11,7 +11,7 @@ body{
   padding:20px;
 }
 .container{
-  max-width:700px;
+  max-width:750px;
   margin:auto;
   background:#161923;
   padding:20px;
@@ -38,7 +38,7 @@ button:hover{opacity:.9}
   background:#1d2130;
   padding:12px;
   border-radius:10px;
-  max-height:350px;
+  max-height:400px;
   overflow:auto;
 }
 .item{
@@ -52,58 +52,56 @@ a{color:#4f8cff;text-decoration:none}
 <body>
 
 <div class="container">
-<h2>🎯 Roblox Asset ID Generator (WORKS)</h2>
+  <h2>🎯 Roblox Asset ID Generator</h2>
 
-<select id="assetType">
-  <option value="3">Audio (Music)</option>
-  <option value="13">Decals</option>
-  <option value="10">Models</option>
-  <option value="24">Animations</option>
-  <option value="49">Meshes</option>
-</select>
+  <select id="assetType">
+    <option value="3">Audio (Music)</option>
+    <option value="13">Decals</option>
+    <option value="10">Models</option>
+    <option value="24">Animations</option>
+    <option value="49">Meshes</option>
+  </select>
 
-<button onclick="generate()">Generate Real IDs</button>
+  <button onclick="generate()">Generate Real IDs</button>
 
-<div class="results" id="results">Click generate to load IDs</div>
+  <div class="results" id="results">
+    Click “Generate Real IDs”
+  </div>
 </div>
 
 <script>
+const WORKER_URL = "https://robloxid.blakestalder123.workers.dev";
+
 async function generate(){
-  const results=document.getElementById("results");
-  results.innerHTML="Loading real assets…";
+  const results = document.getElementById("results");
+  results.textContent = "Loading real Roblox assets…";
 
-  const type=document.getElementById("assetType").value;
-
-  const url =
-    "https://cors.isomorphic-git.org/https://catalog.roblox.com/v1/search/items/details"
-    + "?Category=All"
-    + "&Subcategory=All"
-    + "&Limit=30"
-    + "&SortType=3"
-    + "&AssetTypeId=" + type;
+  const type = document.getElementById("assetType").value;
 
   try{
-    const res=await fetch(url);
-    const data=await res.json();
+    const res = await fetch(`${WORKER_URL}?type=${type}`);
+    const data = await res.json();
 
-    results.innerHTML="";
+    results.innerHTML = "";
 
-    if(!data.data || data.data.length===0){
-      results.innerHTML="No assets returned (try again).";
+    if(!data.data || data.data.length === 0){
+      results.textContent = "No assets returned. Click again.";
       return;
     }
 
-    data.data.forEach(a=>{
-      const div=document.createElement("div");
-      div.className="item";
-      div.innerHTML=
-        `<b>${a.name}</b><br>
-         ID: ${a.id}<br>
-         <a href="https://create.roblox.com/store/asset/${a.id}" target="_blank">Open asset</a>`;
+    data.data.forEach(asset=>{
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <b>${asset.name}</b><br>
+        ID: ${asset.id}<br>
+        <a href="https://create.roblox.com/store/asset/${asset.id}" target="_blank">Open asset</a>
+      `;
       results.appendChild(div);
     });
+
   }catch(e){
-    results.innerHTML="Failed to load assets.";
+    results.textContent = "Failed to load assets.";
   }
 }
 </script>

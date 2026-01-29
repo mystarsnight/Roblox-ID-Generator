@@ -2,156 +2,111 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Roblox Asset & Game Finder</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roblox Asset ID Generator</title>
 <style>
-body{background:#0b0d12;color:#eee;font-family:sans-serif;padding:20px;display:flex;justify-content:center}
-.app{width:100%;max-width:900px;display:grid;grid-template-columns:1fr 1.2fr;gap:20px}
-.card{background:#161923;border-radius:16px;padding:18px;box-shadow:0 20px 40px rgba(0,0,0,.45)}
-label{font-size:.85rem;color:#9aa0b4}
-select,input[type=range]{width:100%;margin-top:6px}
-button{width:100%;padding:12px;border:none;border-radius:10px;font-weight:600;cursor:pointer;margin-top:10px}
-.start{background:#4f8cff;color:white}
-.stop{background:#ff4f4f;color:white}
-.stats{font-size:.85rem;color:#9aa0b4;margin-top:10px}
-.results{margin-top:12px;max-height:300px;overflow:auto;font-size:.85rem}
-.asset{border-bottom:1px solid #2a2f45;padding:8px 0}
-.ids{background:#1d2130;border-radius:12px;padding:12px;height:360px;overflow:auto;font-size:.85rem}
-.id{padding:6px 0;border-bottom:1px solid #2a2f45}
-a{color:#4f8cff}
+body{
+  background:#0b0d12;
+  color:#eee;
+  font-family:Arial, sans-serif;
+  padding:20px;
+}
+.container{
+  max-width:700px;
+  margin:auto;
+  background:#161923;
+  padding:20px;
+  border-radius:14px;
+}
+h2{text-align:center}
+select,button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:10px;
+  border:none;
+  font-size:16px;
+}
+button{
+  background:#4f8cff;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:hover{opacity:.9}
+.results{
+  margin-top:15px;
+  background:#1d2130;
+  padding:12px;
+  border-radius:10px;
+  max-height:350px;
+  overflow:auto;
+}
+.item{
+  border-bottom:1px solid #333;
+  padding:8px 0;
+  font-size:14px;
+}
+a{color:#4f8cff;text-decoration:none}
 </style>
 </head>
 <body>
-<div class="app">
 
-<!-- LEFT: Controls -->
-<div class="card">
-<h2>🎯 Finder</h2>
+<div class="container">
+<h2>🎯 Roblox Asset ID Generator (WORKS)</h2>
 
-<label>Search Type</label>
-<select id="searchType">
-  <option value="asset">Assets</option>
-  <option value="game">Games / Places</option>
+<select id="assetType">
+  <option value="3">Audio (Music)</option>
+  <option value="13">Decals</option>
+  <option value="10">Models</option>
+  <option value="24">Animations</option>
+  <option value="49">Meshes</option>
 </select>
 
-<div id="assetOptions">
-  <label>Asset Category</label>
-  <select id="assetCategory">
-    <option value="any">Any</option>
-    <option value="3">Audio</option>
-    <option value="13">Decal</option>
-    <option value="10">Model</option>
-    <option value="24">Animation</option>
-    <option value="49">Mesh</option>
-  </select>
-</div>
+<button onclick="generate()">Generate Real IDs</button>
 
-<label>Speed (attempts/sec)</label>
-<input type="range" id="speed" min="1" max="75" value="20">
-
-<div class="stats">
-Speed: <span id="speedVal">20</span>/sec<br>
-Attempts: <span id="tries">0</span><br>
-Found: <span id="found">0</span>
-</div>
-
-<button class="start" onclick="start()">Start</button>
-<button class="stop" onclick="stop()" id="stopBtn" disabled>Stop</button>
-
-<div class="results" id="results"></div>
-</div>
-
-<!-- RIGHT: ID List -->
-<div class="card">
-<h2>🆔 Valid IDs</h2>
-<div class="ids" id="ids"></div>
-</div>
-
+<div class="results" id="results">Click generate to load IDs</div>
 </div>
 
 <script>
-let running=false,tries=0,found=0,timer=null;
+async function generate(){
+  const results=document.getElementById("results");
+  results.innerHTML="Loading real assets…";
 
-const speedSlider=document.getElementById("speed");
-const speedVal=document.getElementById("speedVal");
-const searchType=document.getElementById("searchType");
-const assetCategory=document.getElementById("assetCategory");
-const assetOptions=document.getElementById("assetOptions");
+  const type=document.getElementById("assetType").value;
 
-speedSlider.oninput=()=>speedVal.textContent=speedSlider.value;
+  const url =
+    "https://cors.isomorphic-git.org/https://catalog.roblox.com/v1/search/items/details"
+    + "?Category=All"
+    + "&Subcategory=All"
+    + "&Limit=30"
+    + "&SortType=3"
+    + "&AssetTypeId=" + type;
 
-// show/hide asset category if searching games
-searchType.onchange=()=>{assetOptions.style.display=searchType.value==="asset"?"block":"none"}
-
-function randomId(){return Math.floor(Math.random()*1_000_000_000)+1000}
-
-async function checkAsset(id){
   try{
-    const url=`https://cors.isomorphic-git.org/https://economy.roblox.com/v2/assets/${id}/details`;
     const res=await fetch(url);
-    if(!res.ok)return null;
-    return res.json();
-  }catch{return null;}
-}
+    const data=await res.json();
 
-async function checkGame(id){
-  try{
-    const url=`https://cors.isomorphic-git.org/https://games.roblox.com/v1/games?universeIds=${id}`;
-    const res=await fetch(url);
-    if(!res.ok)return null;
-    const j=await res.json();
-    return j.data?.length?j.data[0]:null;
-  }catch{return null;}
-}
+    results.innerHTML="";
 
-function start(){
-  if(running)return;
-  running=true;
-  document.getElementById("stopBtn").disabled=false;
-  timer=setInterval(runBatch,1000);
-}
-
-function stop(){
-  running=false;
-  clearInterval(timer);
-  document.getElementById("stopBtn").disabled=true;
-}
-
-async function runBatch(){
-  if(!running)return;
-  const batch=Number(speedSlider.value);
-  for(let i=0;i<batch;i++){
-    tries++;
-    document.getElementById("tries").textContent=tries;
-    const id=randomId();
-
-    if(searchType.value==="asset"){
-      const data=await checkAsset(id);
-      if(!data)continue;
-      if(assetCategory.value!=="any"&&String(data.AssetTypeId)!==assetCategory.value)continue;
-      addResult(id,data.Name,data.AssetTypeId,data.Creator?.Name,`https://create.roblox.com/store/asset/${id}`);
-    }else if(searchType.value==="game"){
-      const data=await checkGame(id);
-      if(!data)continue;
-      addResult(data.id,data.name,"Game",data.creator?.name,`https://www.roblox.com/games/${data.id}`);
+    if(!data.data || data.data.length===0){
+      results.innerHTML="No assets returned (try again).";
+      return;
     }
+
+    data.data.forEach(a=>{
+      const div=document.createElement("div");
+      div.className="item";
+      div.innerHTML=
+        `<b>${a.name}</b><br>
+         ID: ${a.id}<br>
+         <a href="https://create.roblox.com/store/asset/${a.id}" target="_blank">Open asset</a>`;
+      results.appendChild(div);
+    });
+  }catch(e){
+    results.innerHTML="Failed to load assets.";
   }
 }
-
-function addResult(id,name,type,creator,url){
-  found++;
-  document.getElementById("found").textContent=found;
-
-  const asset=document.createElement("div");
-  asset.className="asset";
-  asset.innerHTML=`<strong>${name}</strong><br>Type: ${type}<br>Creator: ${creator||"Unknown"}<br><a href="${url}" target="_blank">Open</a>`;
-  document.getElementById("results").prepend(asset);
-
-  const idEntry=document.createElement("div");
-  idEntry.className="id";
-  idEntry.innerHTML=`${id} — <a href="${url}" target="_blank">open</a>`;
-  document.getElementById("ids").prepend(idEntry);
-}
 </script>
+
 </body>
 </html>
